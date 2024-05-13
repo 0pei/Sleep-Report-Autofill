@@ -7,11 +7,7 @@ from selenium.common.exceptions import NoSuchElementException
 from docx import Document
 import time
 import sys
-
-sign_in_account=sys.argv[1]
-sign_in_password=sys.argv[2]
-which_page=sys.argv[3]
-which_patient=sys.argv[4]
+import os
 
 def login(chrome):
     account = chrome.find_element(By.ID, "username")
@@ -21,12 +17,16 @@ def login(chrome):
     password_value = password.get_attribute("value")
     print(password_value)
     if not account_value:
-        account.send_keys(sign_in_account)
+        account.send_keys(sys.argv[1])
     if not password_value:
-        password.send_keys(sign_in_password)
+        password.send_keys(sys.argv[2])
     chrome.find_element(By.ID, "userSubmit").click()
 
-service = Service(executable_path='./chromedriver.exe')
+if "crawler" in os.getcwd():
+    python_path='.\\'
+else:
+    python_path='.\\crawler\\'
+service = Service(executable_path=os.path.join(python_path, 'chromedriver.exe'))
 options = webdriver.ChromeOptions()
 chrome = webdriver.Chrome(service=service, options=options)
 url = "https://ap-airview.resmed.com"
@@ -50,17 +50,27 @@ diagnostic_href=chrome.find_element(By.XPATH, "//*[@id='diagnostic-patients-link
 chrome.get(diagnostic_href)
 time.sleep(1)
 
-select = Select(chrome.find_element(By.ID,"selectPageNum"))
-select.select_by_value(str(which_page))
-time.sleep(1)
-
-patientName=chrome.find_element(By.XPATH, "//*[@id='hstPatientsTable']/tbody/tr["+str(which_patient)+"]/td[1]/a").text
-fileNames = patientName.split(', ')
-fileName=fileNames[0]+fileNames[1]
-# print(fileName)
-patient_href=chrome.find_element(By.XPATH, "//*[@id='hstPatientsTable']/tbody/tr["+str(which_patient)+"]/td[1]/a").get_attribute("href")
-chrome.get(patient_href)
-report_values=chrome.find_elements(By.CLASS_NAME, "column.report-value")
+select=Select(chrome.find_element(By.ID,"selectPageNum"))
+report_values=[]
+dir=sys.argv[3].split('\\')[-1]
+for option in select.options:
+    if len(report_values)>1:
+        break
+    select.select_by_value(str(option.text))
+    patients=len(chrome.find_elements(By.XPATH, "//*[@id='hstPatientsTable']/tbody/tr"))
+    time.sleep(1)
+    for i in range(1, int(patients)+1):
+        patientName=chrome.find_element(By.XPATH, "//*[@id='hstPatientsTable']/tbody/tr["+str(i)+"]/td[1]/a").text
+        fileNames=patientName.split(', ')
+        if len(fileNames[1].split('_'))<2:
+            continue
+        date=fileNames[1].split('_')[0]
+        patientID=fileNames[1].split('_')[1]
+        if date==dir.split('_')[0] and patientID==dir.split('_')[1] and fileNames[0]==dir.split('_')[2]:
+            patient_href=chrome.find_element(By.XPATH, "//*[@id='hstPatientsTable']/tbody/tr["+str(i)+"]/td[1]/a").get_attribute("href")
+            chrome.get(patient_href)
+            report_values=chrome.find_elements(By.CLASS_NAME, "column.report-value")
+            break
 
 def replace_text_in_table(table, target_dict):
     for row in table.rows:
@@ -78,34 +88,37 @@ def replace_text_in_table(table, target_dict):
                             inline[0].text = text
 
 def main():
-    doc = Document('成大Home ApneaLink screen報告v1.docx')
+    os.remove(sys.argv[3]+'\\'+dir+'.docx')
+    doc = Document(os.path.join(python_path, '成大Home ApneaLink screen報告v2.docx'))
+    f = open(sys.argv[3]+'\\reportTemp.txt', 'r')
+    lines = f.readlines()
     replacement_dict = {
-        '{a1}': report_values[13].text,
-        '{a2}': report_values[12].text,
-        '{a3}': report_values[11].text,
-        '{a4}': report_values[30].text,
-        '{a5}': report_values[29].text,
-        '{a6}': report_values[34].text,
-        '{a7}': report_values[33].text,
-        '{a8}': report_values[32].text,
-        '{a9}': report_values[31].text,
-        '{a10}': report_values[16].text,
-        '{a11}': report_values[15].text,
-        '{a12}': report_values[14].text,
-        '{a13}': report_values[18].text,
-        '{a14}': report_values[17].text[1:-2],
-        '{a15}': report_values[21].text,
-        '{a16}': report_values[20].text,
-        '{a17}': report_values[19].text,
-        '{a18}': report_values[23].text,
-        '{a19}': report_values[22].text[1:-2],
-        '{a20}': report_values[26].text,
-        '{a21}': report_values[25].text,
-        '{a22}': report_values[24].text,
-        '{a23}': report_values[28].text,
-        '{a24}': report_values[27].text[1:-2],
-        '{a25}': report_values[36].text,
-        '{a26}': report_values[35].text,
+        '{a1}': lines[0].strip(), #report_values[13].text,
+        '{a2}': lines[1].strip(), #report_values[12].text,
+        '{a3}': lines[2].strip(), #report_values[11].text,
+        '{a4}': lines[3].strip(), #report_values[30].text,
+        '{a5}': lines[4].strip(), #report_values[29].text,
+        '{a6}': lines[5].strip(), #report_values[34].text,
+        '{a7}': lines[6].strip(), #report_values[33].text,
+        '{a8}': lines[7].strip(), #report_values[32].text,
+        '{a9}': lines[8].strip(), #report_values[31].text,
+        # '{a10}': report_values[16].text,
+        # '{a11}': report_values[15].text,
+        # '{a12}': report_values[14].text,
+        # '{a13}': report_values[18].text,
+        # '{a14}': report_values[17].text[1:-2],
+        # '{a15}': report_values[21].text,
+        # '{a16}': report_values[20].text,
+        # '{a17}': report_values[19].text,
+        # '{a18}': report_values[23].text,
+        # '{a19}': report_values[22].text[1:-2],
+        # '{a20}': report_values[26].text,
+        # '{a21}': report_values[25].text,
+        # '{a22}': report_values[24].text,
+        # '{a23}': report_values[28].text,
+        # '{a24}': report_values[27].text[1:-2],
+        '{a25}': lines[24].strip(), #report_values[36].text,
+        '{a26}': lines[25].strip(), #report_values[35].text,
 
         '{b1}': report_values[3].text,
         '{b2}': report_values[2].text,
@@ -118,27 +131,29 @@ def main():
         '{b9}': report_values[8].text,
 
         '{c1}': report_values[41].text,
-        '{c2}': report_values[40].text,
-        '{c3}': report_values[39].text,
+        '{c2}': lines[36].strip(), #report_values[40].text,
+        '{c3}': lines[37].strip(), #report_values[39].text,
         '{c4}': report_values[44].text,
         '{c5}': report_values[43].text,
         '{c6}': report_values[42].text,
         '{c7}': report_values[46].text,
         '{c8}': report_values[45].text,
-        '{c9}': report_values[37].text,
-        '{c10}': report_values[38].text,
+        '{c9}': lines[43].strip(), #report_values[37].text,
+        '{c10}': lines[44].strip(), #report_values[38].text,
 
         '{d1}': report_values[50].text,
         '{d2}': report_values[49].text,
         '{d3}': report_values[48].text,
 
-        '{e1}': report_values[53].text,
-        '{e2}': report_values[52].text,
-        '{e3}': report_values[51].text,
+        '{e1}': lines[48].strip(), #report_values[53].text,
+        '{e2}': lines[49].strip(), #report_values[52].text,
+        '{e3}': lines[50].strip(), #report_values[51].text,
     }
     replace_text_in_table(doc.tables[0], replacement_dict)
     replace_text_in_table(doc.tables[2], replacement_dict)
-    doc.save('成大Home ApneaLink screen報告v1 - '+fileName+'.docx')
+    doc.save(sys.argv[3]+'\\'+dir+'.docx')
+    f.close()
+    # os.remove(sys.argv[3]+'\\reportTemp.txt')
 
 if __name__ == "__main__":
     main()

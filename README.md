@@ -3,5 +3,5 @@
 2. `pip install selenium python-docx`
 ## Run
 ```!
-python apnealinkReport.py <account> <password> <page number> <ordinal number>
+python apnealinkReport.py <account> <password> <file directory>
 ```
