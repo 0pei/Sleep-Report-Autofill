@@ -88,7 +88,13 @@ def replace_text_in_table(table, target_dict):
                             inline[0].text = text
 
 def main():
-    os.remove(sys.argv[3]+'\\'+dir+'.docx')
+    if os.path.exists(sys.argv[3]+'\\'+dir+'.docx'):
+        try:
+            os.remove(sys.argv[3]+'\\'+dir+'.docx')
+        except PermissionError:
+            pass
+        except Exception as e:
+            pass
     doc = Document(os.path.join(python_path, '成大Home ApneaLink screen報告v2.docx'))
     f = open(sys.argv[3]+'\\reportTemp.txt', 'r')
     lines = f.readlines()
